@@ -106,13 +106,7 @@ class Tree:
                         final_treshold = threshold
                         final_feature = feature
 
-            # #select final split of data
-            # X_left = X[[final_left]] 
-            # X_right = X[[final_right]]
-            # y_left = y[[final_left]]
-            # y_right = y[[final_right]]
-                    
-                    
+                        
                 
         return final_left, final_right, gini_index, final_treshold, final_feature
         
