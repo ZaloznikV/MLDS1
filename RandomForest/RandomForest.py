@@ -18,7 +18,7 @@ X = data.drop(columns="Class")
 X_train = X[:130].to_numpy()
 X_test = X[130:].to_numpy()
 y_train = y[:130].to_numpy()
-y_test = y[130:].to_numpy()
+y_test = y[130:].to_numpy().flatten()
 
 
 
@@ -36,7 +36,7 @@ class Node:
         
     def predict_helper(self, X):
         if self.value != None:
-            return self.value()
+            return self.value
         elif X[self.feature] < self.threshold:
             return self.left.predict_helper(X)
         else:
@@ -74,10 +74,14 @@ class Tree:
                 idx_right = []
                 for i, value in enumerate(list(X[:,feature])):
                     #print(value)
-                    if value < threshold:
-                        idx_left.append(i)
-                    else:
-                        idx_right.append(i)
+                    try:
+                        if value < threshold:
+                            idx_left.append(i)
+                        else:
+                            idx_right.append(i)
+                    except:
+                        #print("v: ", value, "t: ", threshold, "f: ", feature, "i: ",i)
+                        break
                 #weights
                 w_left = len(idx_left)/len(y)
                 w_right = len(idx_right)/len(y)
@@ -89,10 +93,10 @@ class Tree:
                     
                     g_left = 1 - np.square(np.sum(y_left)/np.size(y_left)) - np.square((np.size(y_left) - np.sum(y_left))/np.size(y_left))
                     g_right = 1 - np.square(np.sum(y_right)/np.size(y_right)) - np.square((np.size(y_right) - np.sum(y_right))/np.size(y_right))
-                    print("g_left: ", g_left, y_left)
-                    print("g_right: ", g_right, y_right)
-                    print()
-                    print("###################")
+                    # print("g_left: ", g_left, y_left)
+                    # print("g_right: ", g_right, y_right)
+                    # print()
+                    # print("###################")
                     gini_split = w_left * g_left + w_right * g_right
                     
                     if gini_split < gini_index: #update current best split
@@ -113,6 +117,8 @@ class Tree:
         return final_left, final_right, gini_index, final_treshold, final_feature
         
     def build(self, X, y):
+        # print(self.get_candidate_columns)
+        # print("###")
         #print(np.shape(y))
         if np.size(y) < self.min_samples: #return Node with output - stopping criteria
             return Node(value=np.bincount(y).argmax()) #most occurance value
@@ -123,10 +129,10 @@ class Tree:
         else: #perform split
 
             index_left, index_right, gini_index, treshold, feature = self.find_best_split(X,y)
-            X_left = X[[index_left]]
-            y_left = y[[index_left]]
-            X_right = X[[index_right]]
-            y_right = y[[index_right]]
+            X_left = X[index_left]
+            y_left = y[index_left]
+            X_right = X[index_right]
+            y_right = y[index_right]
             
             left_child = self.build(X_left, y_left)
             right_child = self.build(X_right, y_right)
@@ -134,48 +140,71 @@ class Tree:
             
 
 
-# import time
-# x_columns = all_columns(X_test,1)
-# gini_index = 2
-# for feature in x_columns:
-#     for threshold in X_test[:,feature]:
-#         idx_left = []
-#         idx_right = []
-#         for i, value in enumerate(X_test[:,feature]):
-#             #print(i, threshold,value)
-#             #time.sleep(5)
+import time
+def find_best(X_test, y_test):
+    x_columns = all_columns(X_test,1)
+    gini_index = 2
+    for feature in x_columns:
+        for threshold in X_test[:,feature]:
+            idx_left = []
+            idx_right = []
+            for i, value in enumerate(X_test[:,feature]):
+                #print(i, threshold,value)
+                #time.sleep(5)
+    
+                if value < threshold:
+                    idx_left.append(i)
+                else:
+                    idx_right.append(i)
+            w_left = len(idx_left)/len(y_test)
+            w_right = len(idx_right)/len(y_test)
+            
+            y_left = y_test[[idx_left]]
+            y_right = y_test[[idx_right]]
+            
+            if (np.size(y_left) != 0) and (np.size(y_right) !=0): #valid split
+            
+                g_left = 1 - np.square(np.sum(y_left)/np.size(y_left)) - np.square((np.size(y_left) - np.sum(y_left))/np.size(y_left))
+                g_right = 1 - np.square(np.sum(y_right)/np.size(y_right)) - np.square((np.size(y_right) - np.sum(y_right))/np.size(y_right))
+                
+                gini_split = w_left * g_left + w_right * g_right
+                
+                if gini_split < gini_index: #update current best split
+                    gini_index = gini_split
+                    final_left = idx_left
+                    final_right = idx_right
+                    final_treshold = threshold
+                    final_feature = feature
+    return final_left, final_right, gini_index, final_treshold, final_feature
 
-#             if value < threshold:
-#                 idx_left.append(i)
-#             else:
-#                 idx_right.append(i)
-#         w_left = len(idx_left)/len(y_test)
-#         w_right = len(idx_right)/len(y_test)
-        
-#         y_left = y_test[[idx_left]]
-#         y_right = y_test[[idx_right]]
-        
-#         g_left = 1 - np.square(np.sum(y_left)/np.size(y_left)) - np.square((np.size(y_left) - np.sum(y_left))/np.size(y_left))
-#         g_right = 1 - np.square(np.sum(y_right)/np.size(y_right)) - np.square((np.size(y_right) - np.sum(y_right))/np.size(y_right))
-        
-#         gini_split = w_left * g_left + w_right * g_right
-        
-#         if gini_split < gini_index: #update current best split
-#             gini_index = gini_split
-#             final_left = idx_left
-#             final_right = idx_right
-#             final_treshold = threshold
-#             final_feature = feature
+
+# test_X = np.array([[0, 0],
+#               [0, 1],
+#               [1, 0],
+#               [1, 1]])
+# test_y = np.array([0, 0, 1, 1])
+
+# test_tree = Tree(1, all_columns(test_X, 1))
+# model = test_tree.build(test_X, test_y)
+# print(model.predict(test_X))
+test_tree = Tree(1, all_columns(X_test, 1))
+model = test_tree.build(X_test, y_test)
+
+# bla = find_best(test_X, test_y)
+
+# split = find_best(X_test, y_test)
+
+# Lx = X_test[split[0]]
+# Ly = y_test[split[0]]
+
+# Rx = X_test[split[1]]
+# Ry = y_test[split[1]]
 
 
-test_X = np.array([[0, 0],
-              [0, 1],
-              [1, 0],
-              [1, 1]])
-test_y = np.array([0, 0, 1, 1])
 
-test_tree = Tree(1, all_columns(test_X, 1))
-model = test_tree.build(test_X, test_y)
+
+
+
 
 
 
