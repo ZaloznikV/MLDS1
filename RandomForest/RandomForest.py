@@ -43,7 +43,7 @@ class Node:
 
 class Tree:
     def __init__(self, rand=None, get_candidate_columns=all_columns, min_samples=2):
-        self.rand = random.Random(rand)
+        self.rand = random.Random(rand) #mogoce treba popravit v argument konstruktorja random(stevilka)
         self.get_candidate_columns=get_candidate_columns
         self.min_samples = min_samples
         
@@ -57,9 +57,11 @@ class Tree:
         final_feature = None
         # print(self.get_candidate_columns)
         # time.sleep(10)
- 
-        for feature in self.get_candidate_columns: #iterate over all features
+        columns = self.get_candidate_columns(X, 1)
+        #for feature in self.get_candidate_columns: #iterate over all features
             #print(feature)
+        for feature in columns: #iterate over all features
+
             for threshold in (X[:,feature]): #iterate over all tresholds
                 idx_left = []
                 idx_right = []
@@ -126,6 +128,28 @@ class Tree:
             
 
 
+
+# class RandomForest:
+#     def __init__(self, rand=None, n=100):
+#         self.rand = random.Random(rand)
+#         self.n=n
+    
+#     def build(self, X,y):
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """TEST"""
 
 # def find_best(X_test, y_test):
@@ -166,11 +190,11 @@ class Tree:
 #     return final_left, final_right, gini_index, final_treshold, final_feature
 
 
-# test_X = np.array([[0, 0],
-#               [0, 1],
-#               [1, 0],
-#               [1, 1]])
-# test_y = np.array([0, 0, 1, 1])
+test_X = np.array([[0, 0],
+              [0, 1],
+              [1, 0],
+              [1, 1]])
+test_y = np.array([0, 0, 1, 1])
 
 # test_tree = Tree(1, all_columns(test_X, 1))
 # model = test_tree.build(test_X, test_y)
@@ -192,6 +216,10 @@ class Tree:
 
 
 
+
+
+
+
 def hw_tree_full():
     #data preparation
     data = pd.read_csv("tki-resistance.csv", index_col=False)
@@ -206,13 +234,28 @@ def hw_tree_full():
     
     n=-1
     a = time.time()
-    tree = Tree(2, all_columns(X_train[:n],2))
+    tree = Tree(2, all_columns)
     model = tree.build(X_train[:n], y_train[:n])
-    print(time.time() - a)
+    print("time used: ", time.time() - a)
     acc_train = (y_train == model.predict(X_train)).sum() / np.size(y_train)
     acc_test = (y_test == model.predict(X_test)).sum() / np.size(y_test)
     
-    return acc_train, acc_test
+    #bernoulli distribution
+    #SE = sqrt(p(1-p)/n)
+    
+    SE_train = np.sqrt(acc_train * (1- acc_train) / len(y_train))
+    SE_test = np.sqrt(acc_test * (1- acc_test) / len(y_test))
+    
+    
+    print("acc train: ", acc_train)
+    print("acc test: ", acc_test)
+    print("SE train: ", SE_train)
+    print("SE test: ", SE_test)
+    
+    
+    #return acc_train, acc_test, SE_train, SE_test
+    
+
     
     
     
