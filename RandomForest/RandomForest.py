@@ -16,141 +16,92 @@ import time
 def all_columns(X, rand):
     return list(range(X.shape[1]))
 
-class Node:
-    def __init__(self, feature=None, threshold=None, gini=None, left=None, right=None, value=None):
-        self.feature = feature
-        self.threshold = threshold
-        self.gini = gini
-        self.left = left
-        self.right = right
-        self.value = value #if leaf node
+def random_sqrt_columns(X, rand):
+    c = random.sample(list(range(X.shape[1])), round(np.sqrt(X.shape[1])) )
+    return c
+
+
+import pickle
+
+
+class RandomForest:
+    def __init__(self, rand=None, n=100):
+        self.rand = random.Random(rand)
+        self.n=n
+    
+    def build(self, X,y):
+        trees = []
+        n_rows = X.shape[0] #number of rows
         
-    def predict_helper(self, X):
-        if self.value != None:
-            return self.value
-        elif X[self.feature] < self.threshold:
-            return self.left.predict_helper(X)
-        else:
-            return self.right.predict_helper(X)
+        for i in range(self.n):
+            #try:
+                bootstrap_index = random.choices(list(range(n_rows)), k=n_rows)
+                X_bootstrap = X[bootstrap_index]
+                y_bootstrap = y[bootstrap_index]
+                # print(X_bootstrap)
+                # print(y_bootstrap)
+                # print("#########################")
+                # try:
+                tree = Tree(self.rand, get_candidate_columns=random_sqrt_columns, min_samples=2)
+                trees.append(tree.build(X_bootstrap, y_bootstrap))
+                # except: 
+                #     print("X: ", X_bootstrap, type(X_bootstrap), np.shape(X_bootstrap))
+                #     print("y: ", y_bootstrap, type(y_bootstrap), np.shape(y_bootstrap))
+                #     tree = Tree(self.rand, get_candidate_columns=random_sqrt_columns, min_samples=2)
+                #     bla = tree.build(X_bootstrap, y_bootstrap)
+                
+            # except:
+            #     print("x_bootstrap: ", X_bootstrap)
+            #     print("y_bootstrap: ", y_bootstrap)
+            #     print("index: ", bootstrap_index)
+            #     print("###############################")
+            #     #tree.build(X_bootstrap, y_bootstrap)
+   
+            
+        return RFModel(trees)
+        
+        
+
+
+class RFModel:
+
+    def __init__(self, ls):
+        self.ls = ls
         
     def predict(self, X):
-        results = []
-        for x in X: #for row in matrix
-            results.append(self.predict_helper(x))
+        x_results = []
+
+        for tree in self.ls:
+            x_results.append(tree.predict(X))
+        
+            # results.append(max(set(x_results), key=x_results.count ))
+        
+        partial = np.transpose(np.array(x_results))
+        results = [np.bincount(x).argmax() for x in partial]
         return np.array(results)
-            
-            
-
-class Tree:
-    def __init__(self, rand=None, get_candidate_columns=all_columns, min_samples=2):
-        self.rand = random.Random(rand) #mogoce treba popravit v argument konstruktorja random(stevilka)
-        self.get_candidate_columns=get_candidate_columns
-        self.min_samples = min_samples
-        
-        #self.root = None
-        
-    def find_best_split(self, X,y):
-        gini_index = 2 #more than max possible, looking for the smallest one
-        final_left = None
-        final_right = None
-        final_treshold = None
-        final_feature = None
-        # print(self.get_candidate_columns)
-        # time.sleep(10)
-        columns = self.get_candidate_columns(X, 1)
-        #for feature in self.get_candidate_columns: #iterate over all features
-            #print(feature)
-        for feature in columns: #iterate over all features
-
-            for threshold in (X[:,feature]): #iterate over all tresholds
-                idx_left = []
-                idx_right = []
-                for i, value in enumerate(list(X[:,feature])):
-                    #print(value)
-                    try:
-                        if value < threshold:
-                            idx_left.append(i)
-                        else:
-                            idx_right.append(i)
-                    except:
-                        #print("v: ", value, "t: ", threshold, "f: ", feature, "i: ",i)
-                        break
-                #weights
-                w_left = len(idx_left)/len(y)
-                w_right = len(idx_right)/len(y)
-                
-                y_left = y[[idx_left]]
-                y_right = y[[idx_right]]
-                
-                if (np.size(y_left) != 0) and (np.size(y_right) !=0): #valid split
-                    
-                    g_left = 1 - np.square(np.sum(y_left)/np.size(y_left)) - np.square((np.size(y_left) - np.sum(y_left))/np.size(y_left))
-                    g_right = 1 - np.square(np.sum(y_right)/np.size(y_right)) - np.square((np.size(y_right) - np.sum(y_right))/np.size(y_right))
-                    # print("g_left: ", g_left, y_left)
-                    # print("g_right: ", g_right, y_right)
-                    # print()
-                    # print("###################")
-                    gini_split = w_left * g_left + w_right * g_right
-                    
-                    if gini_split < gini_index: #update current best split
-                        gini_index = gini_split
-                        final_left = idx_left
-                        final_right = idx_right
-                        final_treshold = threshold
-                        final_feature = feature
-
-                        
-                
-        return final_left, final_right, gini_index, final_treshold, final_feature
-        
-    def build(self, X, y):
-        #print("split")
-        # print(self.get_candidate_columns)
-        # print("###")
-        #print(np.shape(y))
-        if np.size(y) < self.min_samples: #return Node with output - stopping criteria
-            return Node(value=np.bincount(y).argmax()) #most occurance value
-        
-        elif len(set(y.flatten())) == 1: # all classes are equal
-            return Node(value=y.flatten()[0])
-        
-        else: #perform split
-
-            index_left, index_right, gini_index, treshold, feature = self.find_best_split(X,y)
-            X_left = X[index_left]
-            y_left = y[index_left]
-            X_right = X[index_right]
-            y_right = y[index_right]
-            
-            left_child = self.build(X_left, y_left)
-            right_child = self.build(X_right, y_right)
-            return Node(feature, treshold, gini_index, left_child, right_child, None ) #popravi!!!
-            
 
 
 
-# class RandomForest:
-#     def __init__(self, rand=None, n=100):
-#         self.rand = random.Random(rand)
-#         self.n=n
-    
-#     def build(self, X,y):
-        
+
+# [[0 0]
+#  [1 1]
+#  [0 1]
+#  [1 0]]
+# [0 1 0 1]
+
+
+
+# x_bootstrap = np.array([[0, 1],
+#  [0, 1],
+#  [0, 1],
+#  [1, 1]])
+# y_bootstrap = np.array( [0, 0, 0, 1])
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-"""TEST"""
+# """TEST"""
 
 # def find_best(X_test, y_test):
 #     print("split")
@@ -170,7 +121,8 @@ class Tree:
 #                     idx_right.append(i)
 #             w_left = len(idx_left)/len(y_test)
 #             w_right = len(idx_right)/len(y_test)
-            
+#             # idx_left = np.array(idx_left)
+#             # idx_right = np.array(idx_right)
 #             y_left = y_test[[idx_left]]
 #             y_right = y_test[[idx_right]]
             
@@ -190,11 +142,31 @@ class Tree:
 #     return final_left, final_right, gini_index, final_treshold, final_feature
 
 
+
+# blax = np.array([[1, 0],
+#   [1, 0],
+#   [0, 0],
+#   [0, 0]])
+# blay = np.array([1, 1, 0, 0])
+
 test_X = np.array([[0, 0],
               [0, 1],
               [1, 0],
               [1, 1]])
 test_y = np.array([0, 0, 1, 1])
+
+model = RandomForest(rand=random.Random(0), n=10)
+t = model.build(test_X, test_y)
+for i, tr in enumerate(t.ls):
+    print(i)
+    pr = tr.predict(test_X)
+    print(pr)
+print("___________")
+print(t.predict(test_X))
+
+# bla = t.predict(test_X)
+
+
 
 # test_tree = Tree(1, all_columns(test_X, 1))
 # model = test_tree.build(test_X, test_y)
@@ -203,16 +175,18 @@ test_y = np.array([0, 0, 1, 1])
 
 # bla = find_best(test_X, test_y)
 
-# split = find_best(X_train, y_train)
+# split = find_best(test_X, test_y)
 
-# Lx = X_test[split[0]]
-# Ly = y_test[split[0]]
+# Lx = test_X[split[0]]
+# Ly = test_y[split[0]]
 
-# Rx = X_test[split[1]]
-# Ry = y_test[split[1]]
+# Rx = test_X[split[1]]
+# Ry = test_y[split[1]]
 
 
 
+# tree = Tree(2, all_columns)
+# model = tree.build( test_X, test_y)
 
 
 
@@ -254,14 +228,55 @@ def hw_tree_full():
     
     
     #return acc_train, acc_test, SE_train, SE_test
+   
+def hw_forest_full():    
+    data = pd.read_csv("tki-resistance.csv", index_col=False)
+    Class = data.Class #original names of classes
+    y = pd.get_dummies(data.Class, drop_first=True) #binnary encoding
     
+    X = data.drop(columns="Class")
+    X_train = X[:130].to_numpy()
+    X_test = X[130:].to_numpy()
+    y_train = y[:130].to_numpy().flatten()
+    y_test = y[130:].to_numpy().flatten()
+    model = RandomForest(rand=random.Random(0), n=100)
+    t = model.build(X_train, y_train)
+    
+    bla = t.predict(X_test)
+    
+    print(np.sum(np.array(bla) == y_test)/len(y_test))
+        
 
     
     
+from itertools import combinations_with_replacement
+
+for comb in combinations_with_replacement(list(range(4)), 4):
+    # print(comb)
+    X = test_X[list(comb)]
+    y = test_y[list(comb)]
+    # print(X)
+    # print(y)
+    tree = Tree(all_columns)
+    m = tree.build(X,y)
+    print(m.predict(test_X))
     
-    
-    
-    
+   
+# data = pd.read_csv("tki-resistance.csv", index_col=False)
+# Class = data.Class #original names of classes
+# y = pd.get_dummies(data.Class, drop_first=True) #binnary encoding
+
+# X = data.drop(columns="Class")
+# X_train = X[:130].to_numpy()
+# X_test = X[130:].to_numpy()
+# y_train = y[:130].to_numpy().flatten()
+# y_test = y[130:].to_numpy().flatten()
+# model = RandomForest(rand=random.Random(0), n=100)
+# t = model.build(X_train, y_train)
+
+# bla = t.predict(X_test)
+
+# print(np.sum(np.array(bla) == y_test)/len(y_test))   
 
 
 
