@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from logistic import MultinomialLogReg#, OrdinalLogReg, \
+from logistic import MultinomialLogReg, OrdinalLogReg#, \
     #multinomial_bad_ordinal_good, MBOG_TRAIN
 
 
@@ -28,14 +28,14 @@ class HW2Tests(unittest.TestCase):
         self.assertTrue((prob >= 0).all())
         np.testing.assert_almost_equal(prob.sum(axis=1), 1)
 
-    # def test_ordinal(self):
-    #     l = OrdinalLogReg()
-    #     c = l.build(self.X, self.y)
-    #     prob = c.predict(self.test[0])
-    #     self.assertEqual(prob.shape, (2, 3))
-    #     self.assertTrue((prob <= 1).all())
-    #     self.assertTrue((prob >= 0).all())
-    #     np.testing.assert_almost_equal(prob.sum(axis=1), 1)
+    def test_ordinal(self):
+        l = OrdinalLogReg()
+        c = l.build(self.X, self.y)
+        prob = c.predict(self.test[0])
+        self.assertEqual(prob.shape, (2, 3))
+        self.assertTrue((prob <= 1).all())
+        self.assertTrue((prob >= 0).all())
+        np.testing.assert_almost_equal(prob.sum(axis=1), 1)
 
     # def test_multinomial_bad_ordinal_good(self):
     #     rand = random.Random(0)
